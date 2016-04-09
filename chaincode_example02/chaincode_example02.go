@@ -24,14 +24,14 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/openblockchain/obc-peer/openchain/chaincode/shim"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
 // SimpleChaincode example simple Chaincode implementation
 type SimpleChaincode struct {
 }
 
-func (t *SimpleChaincode) init(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
 	var A, B string    // Entities
 	var Aval, Bval int // Asset holdings
 	var err error
@@ -96,7 +96,7 @@ func (t *SimpleChaincode) invoke(stub *shim.ChaincodeStub, args []string) ([]byt
 	if err != nil {
 		return nil, errors.New("Failed to get state")
 	}
-	if Avalbytes == nil {
+	if Bvalbytes == nil {
 		return nil, errors.New("Entity not found")
 	}
 	Bval, _ = strconv.Atoi(string(Bvalbytes))
@@ -138,59 +138,51 @@ func (t *SimpleChaincode) delete(stub *shim.ChaincodeStub, args []string) ([]byt
 	return nil, nil
 }
 
-// Query an entity from state
-func (t *SimpleChaincode) query(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	var A string // Entities
-    var err error
-
-    if len(args) != 1 {
-        return nil, errors.New("Incorrect number of arguments. Expecting name of the person to query")
-    }
-
-    A = args[0]
-
-    // Get the state from the ledger
-    Avalbytes, err := stub.GetState(A)
-    if err != nil {
-        jsonResp := "{\"Error\":\"Failed to get state for " + A + "\"}"
-        return nil, errors.New(jsonResp)
-    }
-
-    jsonResp := "{\"Name\":\"" + A + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
-    fmt.Printf("Query Response:%s\n", jsonResp)
-    return Avalbytes, nil
-}
-
-// Run callback representing the invocation of a chaincode
+// Invoke callback representing the invocation of a chaincode
 // This chaincode will manage two accounts A and B and will transfer X units from A to B upon invoke
-func (t *SimpleChaincode) Run(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
 
 	// Handle different functions
-	if function == "init" {
-		// Initialize the entities and their asset holdings
-		return t.init(stub, args)
-	} else if function == "invoke" {
+	if function == "invoke" {
 		// Transaction makes payment of X units from A to B
 		return t.invoke(stub, args)
 	} else if function == "delete" {
 		// Deletes an entity from its state
 		return t.delete(stub, args)
-	} else if function == "query" {
-        // Reads the state of an entity (HACK: SHOULD BE IN QUERY)
-        return t.query(stub, args)
-    }
+	}
 
 	return nil, errors.New("Received unknown function invocation")
 }
 
 // Query callback representing the query of a chaincode
 func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
-    if function == "query" {
-        return t.query(stub, args)
-    }
-    
-	return nil, errors.New("Invalid query function name. Expecting \"query\"")
+	if function != "query" {
+		return nil, errors.New("Invalid query function name. Expecting \"query\"")
+	}
+	var A string // Entities
+	var err error
 
+	if len(args) != 1 {
+		return nil, errors.New("Incorrect number of arguments. Expecting name of the person to query")
+	}
+
+	A = args[0]
+
+	// Get the state from the ledger
+	Avalbytes, err := stub.GetState(A)
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to get state for " + A + "\"}"
+		return nil, errors.New(jsonResp)
+	}
+
+	if Avalbytes == nil {
+		jsonResp := "{\"Error\":\"Nil amount for " + A + "\"}"
+		return nil, errors.New(jsonResp)
+	}
+
+	jsonResp := "{\"Name\":\"" + A + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
+	fmt.Printf("Query Response:%s\n", jsonResp)
+	return Avalbytes, nil
 }
 
 func main() {
