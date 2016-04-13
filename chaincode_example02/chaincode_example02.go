@@ -168,7 +168,22 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
 
 func (t* SimpleChaincode) Run(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
 	fmt.Printf("Run called, passing through to Invoke (same function)")
-	return t.Invoke(stub, function, args)
+	
+	// Handle different functions
+	if function == "invoke" {
+		// Transaction makes payment of X units from A to B
+		fmt.Printf("Function is invoke")
+		return t.invoke(stub, args)
+	} else if function == "init" {
+		fmt.Printf("Function is init")
+		return t.Init(stub, function, args)
+	} else if function == "delete" {
+		// Deletes an entity from its state
+		fmt.Printf("Function is delete")
+		return t.delete(stub, args)
+	}
+
+	return nil, errors.New("Received unknown function invocation")
 }
 
 // Query callback representing the query of a chaincode
