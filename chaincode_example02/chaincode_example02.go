@@ -154,6 +154,9 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
 		// Transaction makes payment of X units from A to B
 		fmt.Printf("Function is invoke")
 		return t.invoke(stub, args)
+	} else if function == "init" {
+		fmt.Printf("Function is init")
+		return t.Init(stub, function, args)
 	} else if function == "delete" {
 		// Deletes an entity from its state
 		fmt.Printf("Function is delete")
